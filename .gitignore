@@ -12,3 +12,6 @@ mlruns/
 
 # Claude Code local files
 .claude/
+
+# Personal reference docs (interview prep, decisions, architecture notes) - not for public repo
+docs/
