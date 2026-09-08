@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: safesight
+    runtime: docker
+    plan: free
+    healthCheckPath: /healthz
+    envVars:
+      - key: SAFESIGHT_BACKEND
+        value: onnx
+      - key: SAFESIGHT_PRESET
+        value: cascade
+      - key: SAFESIGHT_HF_MODEL_REPO
+        value: Shivapreetham17/rqsa-mil-v1
+      - key: SAFESIGHT_SCORE_LOG_PATH
+        value: /tmp/scores.jsonl
+      - key: SAFESIGHT_FEEDBACK_LOG_PATH
+        value: /tmp/feedback.jsonl
+      - key: HF_HOME
+        value: /tmp/hf

@@ -1,0 +1,39 @@
+services:
+  api:
+    build: ..
+    ports:
+      - "8000:7860"
+    environment:
+      SAFESIGHT_CHECKPOINT_PATH: /weights/rqsa_v1_clean.pt
+      SAFESIGHT_DEVICE: cpu
+      SAFESIGHT_PRESET: cascade
+      SAFESIGHT_SCORE_LOG_PATH: /logs/scores.jsonl
+      SAFESIGHT_FEEDBACK_LOG_PATH: /logs/feedback.jsonl
+    volumes:
+      - ../weights:/weights:ro
+      - ../logs:/logs
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.17.2
+    command: mlflow server --host 0.0.0.0 --port 5000 --backend-store-uri /mlruns
+    ports:
+      - "5000:5000"
+    volumes:
+      - ../mlruns:/mlruns
+
+  prometheus:
+    image: prom/prometheus:v2.55.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: safesight
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro

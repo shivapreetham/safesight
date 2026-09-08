@@ -1,0 +1,70 @@
+{
+  "title": "SafeSight Moderation",
+  "uid": "safesight-main",
+  "schemaVersion": 39,
+  "refresh": "10s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Requests per second",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{handler=~\"/v1/.*\"}[5m])) by (handler)",
+          "legendFormat": "{{handler}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Inference latency p50 / p95 (s)",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.5, rate(safesight_inference_seconds_bucket[5m]))",
+          "legendFormat": "p50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, rate(safesight_inference_seconds_bucket[5m]))",
+          "legendFormat": "p95"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Score distribution (rate by bucket)",
+      "type": "heatmap",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(safesight_image_score_bucket[5m])) by (le)",
+          "format": "heatmap",
+          "legendFormat": "{{le}}"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "NSFW vs safe verdicts",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 8, "w": 6, "h": 8 },
+      "targets": [
+        { "expr": "rate(safesight_nsfw_total[5m])", "legendFormat": "nsfw" },
+        { "expr": "rate(safesight_safe_total[5m])", "legendFormat": "safe" }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Cache hits / fetch errors",
+      "type": "timeseries",
+      "gridPos": { "x": 18, "y": 8, "w": 6, "h": 8 },
+      "targets": [
+        { "expr": "rate(safesight_cache_hits_total[5m])", "legendFormat": "cache hits" },
+        { "expr": "rate(safesight_fetch_errors_total[5m])", "legendFormat": "fetch errors" }
+      ]
+    }
+  ]
+}

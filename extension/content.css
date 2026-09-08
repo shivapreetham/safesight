@@ -1,0 +1,26 @@
+img.safesight-pending {
+  filter: blur(24px) !important;
+  transition: filter 0.15s ease;
+}
+
+img.safesight-blocked {
+  filter: blur(32px) grayscale(0.4) !important;
+}
+
+.safesight-badge {
+  position: absolute;
+  z-index: 2147483646;
+  background: rgba(17, 17, 17, 0.85);
+  color: #fff;
+  font-family: system-ui, sans-serif;
+  font-size: 12px;
+  line-height: 1;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.safesight-badge:hover {
+  background: rgba(60, 60, 60, 0.95);
+}

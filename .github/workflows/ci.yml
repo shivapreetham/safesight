@@ -1,0 +1,63 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+      - name: Lint
+        run: ruff check .
+      - name: Tests (checkpoint-independent)
+        run: pytest -q
+        # Tests that need model weights are skipped automatically in CI;
+        # the full golden-set eval gate runs locally before a release.
+
+  docker-build:
+    runs-on: ubuntu-latest
+    needs: lint-test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t safesight:ci .
+
+  deploy-hf-space:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    needs: [lint-test, docker-build]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Push to Hugging Face Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_SPACE_ID: ${{ vars.HF_SPACE_ID }}
+        run: |
+          if [ -z "$HF_TOKEN" ] || [ -z "$HF_SPACE_ID" ]; then
+            echo "HF_TOKEN secret or HF_SPACE_ID variable not set; skipping deploy."
+            exit 0
+          fi
+          pip install huggingface_hub
+          python - <<'EOF'
+          import os
+          from huggingface_hub import HfApi
+          api = HfApi(token=os.environ["HF_TOKEN"])
+          api.upload_folder(
+              repo_id=os.environ["HF_SPACE_ID"],
+              repo_type="space",
+              folder_path=".",
+              ignore_patterns=[".git*", ".venv*", "logs/*", "weights/*",
+                               "extension/*", "mlops/*", "tests/*", "docs/*"],
+          )
+          EOF

@@ -1,0 +1,14 @@
+# Serving runtime - deliberately torch-free. The ONNX backend covers
+# production; install requirements-torch.txt on top for GPU/torch serving,
+# training-adjacent scripts, and the export/benchmark tooling.
+fastapi>=0.115
+uvicorn[standard]>=0.32
+pillow>=10.4
+httpx>=0.27
+pydantic-settings>=2.5
+prometheus-client>=0.21
+prometheus-fastapi-instrumentator>=7.0
+huggingface_hub>=0.26
+python-multipart>=0.0.12
+onnxruntime>=1.19
+numpy>=1.26

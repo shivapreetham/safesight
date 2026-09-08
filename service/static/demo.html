@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SafeSight Console</title>
+<style>
+  :root {
+    --bg: #101318;
+    --surface: #181c23;
+    --surface-2: #1f242d;
+    --border: #2a303b;
+    --ink: #e8ebef;
+    --ink-2: #9aa3b0;
+    --ink-3: #6b7482;
+    --accent: #4f8ef7;
+    --good: #34a06c;
+    --critical: #d05252;
+    --radius: 10px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+    padding: 32px 20px 60px;
+  }
+  .wrap { max-width: 1000px; margin: 0 auto; }
+
+  header { display: flex; align-items: baseline; gap: 14px; margin-bottom: 6px; flex-wrap: wrap; }
+  header h1 { font-size: 22px; font-weight: 650; letter-spacing: 0.2px; }
+  header .sub { color: var(--ink-2); font-size: 13px; }
+  #backendline { color: var(--ink-3); font-size: 12px; margin-bottom: 24px; }
+  #backendline span { color: var(--ink-2); }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 24px; }
+  .tile {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px 16px;
+  }
+  .tile .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.7px; color: var(--ink-3); margin-bottom: 6px; }
+  .tile .value { font-size: 26px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .tile .hint { font-size: 11px; color: var(--ink-3); margin-top: 4px; }
+
+  .panel {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px; margin-bottom: 20px;
+  }
+  .panel h2 { font-size: 14px; font-weight: 600; margin-bottom: 14px; color: var(--ink); }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+  input[type="text"], select {
+    background: var(--surface-2); color: var(--ink);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 9px 12px; font-size: 14px; min-width: 0;
+  }
+  input[type="text"]:focus, select:focus { outline: 1px solid var(--accent); }
+  #urlInput { flex: 1 1 320px; }
+  #apiKey { flex: 1 1 200px; }
+
+  button {
+    background: var(--accent); color: #fff; border: none; border-radius: 8px;
+    padding: 9px 18px; font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+  button:hover { filter: brightness(1.1); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  button.ghost { background: var(--surface-2); color: var(--ink-2); border: 1px solid var(--border); }
+
+  .drop {
+    border: 1.5px dashed var(--border); border-radius: var(--radius);
+    padding: 22px; text-align: center; color: var(--ink-3);
+    cursor: pointer; margin-top: 12px; font-size: 13px;
+  }
+  .drop.dragover { border-color: var(--accent); color: var(--ink-2); }
+
+  .result { margin-top: 16px; display: none; }
+  .result.show { display: block; }
+  .verdict { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: 15px;
+             padding: 6px 14px; border-radius: 999px; margin-bottom: 12px; }
+  .verdict.safe { background: rgba(52,160,108,0.15); color: var(--good); }
+  .verdict.nsfw { background: rgba(208,82,82,0.15); color: var(--critical); }
+  .verdict .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+
+  .kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+  .kv div { background: var(--surface-2); border-radius: 8px; padding: 10px 12px; }
+  .kv .k { font-size: 11px; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.6px; }
+  .kv .v { font-size: 15px; font-weight: 600; margin-top: 3px; font-variant-numeric: tabular-nums; }
+
+  .stages { margin-top: 10px; font-size: 12px; color: var(--ink-2); }
+  .stages code { background: var(--surface-2); border: 1px solid var(--border);
+                 padding: 3px 8px; border-radius: 6px; margin-right: 6px; }
+
+  .heatwrap { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+  .heatwrap figure { background: var(--surface-2); border-radius: 8px; padding: 8px; }
+  .heatwrap img { width: 100%; border-radius: 6px; display: block; }
+  .heatwrap figcaption { font-size: 11px; color: var(--ink-3); margin-top: 6px; text-align: center; }
+  @media (max-width: 640px) { .heatwrap { grid-template-columns: 1fr; } }
+
+  .error { color: var(--critical); font-size: 13px; margin-top: 10px; display: none; }
+  .spin { display: none; color: var(--ink-3); font-size: 13px; margin-top: 10px; }
+  footer { color: var(--ink-3); font-size: 12px; margin-top: 8px; }
+  footer a { color: var(--ink-2); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>SafeSight</h1>
+    <span class="sub">NSFW moderation console - RQSA-MIL</span>
+  </header>
+  <div id="backendline">connecting...</div>
+
+  <div class="tiles">
+    <div class="tile"><div class="label">Images scored</div><div class="value" id="tScored">-</div></div>
+    <div class="tile"><div class="label">NSFW rate</div><div class="value" id="tNsfw">-</div></div>
+    <div class="tile"><div class="label">Cache hit rate</div><div class="value" id="tCache">-</div></div>
+    <div class="tile"><div class="label">Latency p50</div><div class="value" id="tP50">-</div><div class="hint">p95: <span id="tP95">-</span></div></div>
+    <div class="tile"><div class="label">Cascade exits</div><div class="value" id="tExit">-</div><div class="hint">most common final stage</div></div>
+  </div>
+
+  <div class="panel">
+    <h2>Score an image</h2>
+    <div class="row">
+      <input type="text" id="urlInput" placeholder="https://... image URL (or drop a file below)">
+      <select id="strategy">
+        <option value="cascade" selected>cascade</option>
+        <option value="fast">fast</option>
+        <option value="accurate">accurate</option>
+      </select>
+      <button id="scoreBtn">Score</button>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <input type="text" id="apiKey" placeholder="API key (only if the server requires one)">
+    </div>
+    <div class="drop" id="drop">Drop an image here or click to choose a file - scored via upload, never leaves this machine except to your own API</div>
+    <input type="file" id="fileInput" accept="image/*" style="display:none">
+    <div class="spin" id="scoreSpin">Scoring...</div>
+    <div class="error" id="scoreErr"></div>
+
+    <div class="result" id="scoreResult">
+      <div class="verdict" id="verdictBadge"><span class="dot"></span><span id="verdictText"></span></div>
+      <div class="kv">
+        <div><div class="k">Score</div><div class="v" id="rScore"></div></div>
+        <div><div class="k">Score (large tier)</div><div class="v" id="rLarge"></div></div>
+        <div><div class="k">Patches</div><div class="v" id="rPatches"></div></div>
+        <div><div class="k">Wall time</div><div class="v" id="rTime"></div></div>
+      </div>
+      <div class="stages" id="rStages"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Explain a verdict (evidence heatmap)</h2>
+    <div class="row">
+      <button class="ghost" id="explainPick">Choose image</button>
+      <span style="font-size:13px;color:var(--ink-3)">Red overlay marks the windows that drove the score.</span>
+    </div>
+    <input type="file" id="explainInput" accept="image/*" style="display:none">
+    <div class="spin" id="explainSpin">Generating heatmap...</div>
+    <div class="error" id="explainErr"></div>
+    <div class="result" id="explainResult">
+      <div class="heatwrap">
+        <figure><img id="origImg" alt="original image"><figcaption>Original</figcaption></figure>
+        <figure><img id="heatImg" alt="evidence heatmap"><figcaption>Evidence heatmap (max window: <span id="maxWin"></span>)</figcaption></figure>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Endpoints: <a href="/docs">/docs</a> - <a href="/v1/stats">/v1/stats</a> - <a href="/metrics">/metrics</a>.
+    Model: RQSA-MIL v1 (87.9% recall / 93.0% AUC, dense eval).
+  </footer>
+</div>
+
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const keyHeader = () => {
+    const k = $("apiKey").value.trim();
+    return k ? { "X-API-Key": k } : {};
+  };
+
+  async function refreshHealth() {
+    try {
+      const r = await fetch("/healthz");
+      const d = await r.json();
+      $("backendline").innerHTML =
+        "backend <span>" + d.backend + "</span> - device <span>" + d.device +
+        "</span> - default strategy <span>" + d.default_preset +
+        "</span> - cache entries <span>" + d.cache_entries + "</span>";
+    } catch (e) {
+      $("backendline").textContent = "API unreachable";
+    }
+  }
+
+  async function refreshStats() {
+    try {
+      const r = await fetch("/v1/stats");
+      const d = await r.json();
+      $("tScored").textContent = d.images_scored;
+      $("tNsfw").textContent = (d.nsfw_rate * 100).toFixed(1) + "%";
+      $("tCache").textContent = (d.cache_hit_rate * 100).toFixed(0) + "%";
+      $("tP50").textContent = d.latency_p50_ms + " ms";
+      $("tP95").textContent = d.latency_p95_ms + " ms";
+      const exits = Object.entries(d.cascade_exit_counts || {});
+      exits.sort((a, b) => b[1] - a[1]);
+      $("tExit").textContent = exits.length ? exits[0][0] : "-";
+    } catch (e) { /* dashboard tiles just go stale */ }
+  }
+
+  function showVerdict(data, elapsedMs) {
+    const nsfw = data.nsfw === true || data.label === 1;
+    const badge = $("verdictBadge");
+    badge.className = "verdict " + (nsfw ? "nsfw" : "safe");
+    $("verdictText").textContent = nsfw ? "NSFW - would be blurred" : "SAFE";
+    $("rScore").textContent = Number(data.score).toFixed(4);
+    $("rLarge").textContent = Number(data.score_large).toFixed(4);
+    $("rPatches").textContent = data.n_patches != null ? data.n_patches : "-";
+    $("rTime").textContent = elapsedMs + " ms";
+    const stages = data.stages || [];
+    $("rStages").innerHTML = stages.length
+      ? "Cascade path: " + stages.map((s) => "<code>" + s + "</code>").join(" ")
+      : "";
+    $("scoreResult").classList.add("show");
+  }
+
+  function fail(elId, msg) { const el = $(elId); el.textContent = msg; el.style.display = "block"; }
+  function clearFail(elId) { $(elId).style.display = "none"; }
+
+  async function scoreUrl() {
+    const url = $("urlInput").value.trim();
+    if (!url) return;
+    clearFail("scoreErr");
+    $("scoreResult").classList.remove("show");
+    $("scoreSpin").style.display = "block";
+    $("scoreBtn").disabled = true;
+    const start = performance.now();
+    try {
+      const r = await fetch("/v1/score-urls", {
+        method: "POST",
+        headers: Object.assign({ "Content-Type": "application/json" }, keyHeader()),
+        body: JSON.stringify({ urls: [url], preset: $("strategy").value }),
+      });
+      if (r.status === 401) throw new Error("API key required or wrong (401)");
+      const d = await r.json();
+      const res = d.results[0];
+      if (!res.ok) throw new Error(res.error || "fetch failed");
+      showVerdict(res, Math.round(performance.now() - start));
+    } catch (e) {
+      fail("scoreErr", e.message);
+    } finally {
+      $("scoreSpin").style.display = "none";
+      $("scoreBtn").disabled = false;
+      refreshStats();
+    }
+  }
+
+  async function scoreFile(file) {
+    clearFail("scoreErr");
+    $("scoreResult").classList.remove("show");
+    $("scoreSpin").style.display = "block";
+    const form = new FormData();
+    form.append("file", file);
+    const start = performance.now();
+    try {
+      const r = await fetch("/v1/score?preset=" + $("strategy").value, {
+        method: "POST", headers: keyHeader(), body: form,
+      });
+      if (r.status === 401) throw new Error("API key required or wrong (401)");
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      showVerdict(await r.json(), Math.round(performance.now() - start));
+    } catch (e) {
+      fail("scoreErr", e.message);
+    } finally {
+      $("scoreSpin").style.display = "none";
+      refreshStats();
+    }
+  }
+
+  async function explainFile(file) {
+    clearFail("explainErr");
+    $("explainResult").classList.remove("show");
+    $("explainSpin").style.display = "block";
+    const form = new FormData();
+    form.append("file", file);
+    try {
+      const r = await fetch("/v1/explain", { method: "POST", headers: keyHeader(), body: form });
+      if (r.status === 401) throw new Error("API key required or wrong (401)");
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      const blob = await r.blob();
+      $("origImg").src = URL.createObjectURL(file);
+      $("heatImg").src = URL.createObjectURL(blob);
+      $("maxWin").textContent = Number(r.headers.get("X-SafeSight-Max-Window") || 0).toFixed(3);
+      $("explainResult").classList.add("show");
+    } catch (e) {
+      fail("explainErr", e.message);
+    } finally {
+      $("explainSpin").style.display = "none";
+    }
+  }
+
+  $("scoreBtn").addEventListener("click", scoreUrl);
+  $("urlInput").addEventListener("keydown", (e) => { if (e.key === "Enter") scoreUrl(); });
+
+  const drop = $("drop");
+  drop.addEventListener("click", () => $("fileInput").click());
+  $("fileInput").addEventListener("change", (e) => { if (e.target.files[0]) scoreFile(e.target.files[0]); });
+  drop.addEventListener("dragover", (e) => { e.preventDefault(); drop.classList.add("dragover"); });
+  drop.addEventListener("dragleave", () => drop.classList.remove("dragover"));
+  drop.addEventListener("drop", (e) => {
+    e.preventDefault(); drop.classList.remove("dragover");
+    if (e.dataTransfer.files[0]) scoreFile(e.dataTransfer.files[0]);
+  });
+
+  $("explainPick").addEventListener("click", () => $("explainInput").click());
+  $("explainInput").addEventListener("change", (e) => { if (e.target.files[0]) explainFile(e.target.files[0]); });
+
+  refreshHealth();
+  refreshStats();
+  setInterval(refreshStats, 5000);
+  setInterval(refreshHealth, 30000);
+})();
+</script>
+</body>
+</html>
