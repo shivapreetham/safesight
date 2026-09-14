@@ -4,6 +4,9 @@ __pycache__/
 *.pyc
 weights/*.pt
 weights/*.onnx
+weights.zip
+*.pt
+*.onnx
 logs/
 .pytest_cache/
 .ruff_cache/
@@ -15,3 +18,18 @@ mlruns/
 
 # Personal reference docs (interview prep, decisions, architecture notes) - not for public repo
 docs/
+
+# Personal/demo material - not for public repo
+DEMO_GUIDE.md
+QUICK_START.md
+TESTING.md
+MODEL_CARD.md
+architecture-flow.html
+demo.html
+demo.py
+
+# Editor / OS junk
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
